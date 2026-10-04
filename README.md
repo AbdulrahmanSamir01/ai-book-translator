@@ -1,5 +1,9 @@
 # 📚 AI Book Translator
 
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+
+[English Version](README_EN.md) 
+
 أداة سطر أوامر (CLI) لترجمة الكتب والمستندات الذكية مع الحفاظ على هيكلية النشر والتصدير بصيغ متعددة.
 
 ---
