@@ -19,6 +19,16 @@ The project processes and translates books through an automated pipeline:
 
 ---
 
+## 📚 Project Examples
+
+The project was tested on **Linux From Scratch 13.1**. You can view the final translated book in PDF and EPUB formats:
+
+- [Download the PDF version](https://drive.google.com/file/d/1m_MyxVc98iKCzzpY4F1o9I4wFlSJ__vh/view?usp=drive_link)
+- [Download the EPUB version](https://drive.google.com/file/d/13hJgc83kKhzRQTMwtrormNaXcVy9E7NU/view?usp=drive_link)
+
+---
+
+
 ## 🛠️ Setup & Installation
 
 ### 1. Clone the Repository
