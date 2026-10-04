@@ -17,7 +17,19 @@
 3. **الترجمة:** إرسال الأجزاء لترجمتها إلى اللغة العربية عبر نموذج `gemma4:cloud` باستخدام أداة **Ollama**.
 4. **التصدير النهائي:** إعادة تجميع النصوص المترجمة وتصديرها ككتب جاهزة بصيغتي **PDF** و **EPUB**.
 
+
 ---
+
+## 📚 أمثلة على المشروع (Examples)
+
+تمت تجربة المشروع على كتاب **Linux From Scratch 13.1**. يمكنك الاطلاع على النتيجه النهائيه بصيغتي PDF وEPUB:
+
+- [تحميل نسخة PDF](https://drive.google.com/file/d/1m_MyxVc98iKCzzpY4F1o9I4wFlSJ__vh/view?usp=drive_link)
+- [تحميل نسخة EPUB](https://drive.google.com/file/d/13hJgc83kKhzRQTMwtrormNaXcVy9E7NU/view?usp=drive_link)
+
+---
+
+
 
 ## 🛠️ متطلبات الإعداد والتثبيت (Setup & Installation)
 
