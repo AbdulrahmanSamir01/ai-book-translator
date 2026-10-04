@@ -158,7 +158,7 @@ class EpubToMarkdownConverter:
 
 
 if __name__ == "__main__":
-    sample_epub_path = "2-Find Your Why (Simon Sinek David Mead Peter Docker) (z-library.sk, 1lib.sk, z-lib.sk).epub"
+    sample_epub_path = ".epub"
     output_directory = "extracted_markdown"
 
     try:
