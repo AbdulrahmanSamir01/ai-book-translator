@@ -1,144 +1,118 @@
 import os
-import re
-from typing import List
+import logging
+from typing import Optional
 import markdown
-from bs4 import BeautifulSoup
+import ebooklib
 from ebooklib import epub
+from bs4 import BeautifulSoup
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+    datefmt="%H:%M:%S"
+)
+logger = logging.getLogger(__name__)
 
 
 class EPUBBookBuilder:
-    """
-    Builder module to aggregate translated Markdown files and construct a 
-    fully formatted RTL Arabic EPUB 3 book with embedded CSS styles.
-    """
-
-    def __init__(self, book_title: str, author: str = "Translated Book", language: str = "ar"):
-        """
-        Initialize EPUB metadata and core layout configurations.
-        """
+    def __init__(
+        self, 
+        book_title: str, 
+        author: str = "Translated Book", 
+        language: str = "ar",
+        font_path: Optional[str] = None
+    ):
         self.book_title = book_title
         self.author = author
         self.language = language
-        
-        # Initialize EPUB Book object
-        self.book = epub.EpubBook()
-        self.book.set_title(self.book_title)
-        self.book.set_language(self.language)
-        self.book.add_author(self.author)
-        
-        # Set RTL direction metadata for EPUB readers
-        self.book.direction = "rtl"
+        self.font_path = font_path
 
-    def _get_arabic_css(self) -> str:
-        """
-        Return modern RTL CSS rules tailored for Arabic typography and readers.
-        
-        Algorithm Steps:
-        1. Set global document direction to RTL.
-        2. Adjust typography (line-height, margins, font sizes).
-        3. Style code blocks, quotes, tables, and headers for RTL flow.
-        """
-        return """
+    def _get_epub_css(self) -> str:
+        font_css = ""
+        if self.font_path and os.path.exists(self.font_path):
+            font_filename = os.path.basename(self.font_path)
+            # تعديل المسار النسبي لأن الـ CSS داخل مجلد style/
+            font_css = f"""
+            @font-face {{
+                font-family: 'CustomArabicFont';
+                src: url('../fonts/{font_filename}');
+                font-weight: normal;
+                font-style: normal;
+            }}
+            """
+
+        font_family = "'CustomArabicFont', sans-serif" if font_css else "sans-serif"
+
+        return f"""
         @charset "utf-8";
-        
-        html, body {
+        {font_css}
+
+        html, body {{
             direction: rtl;
             text-align: right;
-            font-family: "Amiri", "Traditional Arabic", "Segoe UI", Arial, sans-serif;
+            font-family: {font_family} !important;
             line-height: 1.8;
-            margin: 5%;
-            padding: 0;
             color: #111111;
             background-color: #ffffff;
-        }
-        
-        h1, h2, h3, h4, h5, h6 {
+            margin: 0;
+            padding: 1em;
+        }}
+
+        .closing-page {{
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            min-height: 80vh;
+            padding: 2em;
+            box-sizing: border-box;
+        }}
+
+        .closing-page-content {{
+            max-width: 85%;
+            font-size: 1.25em;
+            line-height: 2;
+            color: #2c3e50;
+            white-space: pre-wrap;
+        }}
+
+        h1, h2, h3, h4, h5, h6 {{
+            font-family: {font_family} !important;
             font-weight: bold;
             line-height: 1.4;
             margin-top: 1.5em;
             margin-bottom: 0.5em;
             color: #000000;
-            page-break-after: avoid;
-        }
-        
-        h1 { font-size: 2em; border-bottom: 2px solid #eeeeee; padding-bottom: 0.3em; }
-        h2 { font-size: 1.6em; }
-        h3 { font-size: 1.3em; }
-        
-        p {
+        }}
+
+        h1 {{ 
+            font-size: 1.8em; 
+            border-bottom: 2px solid #eeeeee; 
+            padding-bottom: 0.3em;
+        }}
+
+        p {{
             margin-top: 0;
             margin-bottom: 1.2em;
             text-align: justify;
-            text-justify: inter-word;
-        }
-        
-        blockquote {
-            margin: 1em 2em 1em 0;
-            padding-right: 1em;
-            border-right: 4px solid #0056b3;
-            border-left: none;
-            color: #555555;
-            font-style: italic;
-        }
-        
-        ul, ol {
-            padding-right: 2em;
-            padding-left: 0;
-            margin-bottom: 1em;
-        }
-        
-        li {
-            margin-bottom: 0.5em;
-        }
-        
-        code {
-            font-family: "Courier New", Courier, monospace;
-            direction: ltr;
-            unicode-bidi: embed;
-            background-color: #f4f4f4;
-            padding: 2px 4px;
-            border-radius: 3px;
-        }
-        
-        pre {
-            direction: ltr;
-            text-align: left;
-            background-color: #f8f8f8;
-            border: 1px solid #ddd;
-            padding: 1em;
-            overflow-x: auto;
-            border-radius: 5px;
-        }
-        
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 1em;
-        }
-        
-        th, td {
-            border: 1px solid #dddddd;
-            padding: 8px;
-            text-align: right;
-        }
-        
-        th {
-            background-color: #f2f2f2;
-        }
+        }}
+
+        img {{
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 1.5em auto;
+        }}
         """
 
-    def build_from_directory(self, input_dir: str, output_epub_path: str) -> None:
-        """
-        Read markdown chunks from input directory, parse HTML, inject CSS, and package EPUB.
-        
-        Algorithm Steps:
-        1. Read and sort all translated .md files in input_dir.
-        2. Convert Markdown content to HTML using extensions (tables, codehilite).
-        3. Wrap converted HTML inside BeautifulSoup to enforce RTL attributes on section roots.
-        4. Create EpubHtml chapters and attach them to the book instance.
-        5. Generate Table of Contents (TOC) and NCX navigation.
-        6. Write EPUB file to output path.
-        """
+    def build_from_directory(
+        self,
+        input_dir: str,
+        output_epub_path: str,
+        images_dir: Optional[str] = None,
+        closing_message_file: Optional[str] = None
+    ) -> None:
         if not os.path.exists(input_dir):
             raise FileNotFoundError(f"Input directory '{input_dir}' does not exist.")
 
@@ -146,84 +120,105 @@ class EPUBBookBuilder:
         if not md_files:
             raise ValueError(f"No .md files found in '{input_dir}'.")
 
-        # Step 1: Add Custom CSS Item
-        css_style = epub.EpubItem(
-            uid="style_rtl",
+        book = epub.EpubBook()
+        book.set_title(self.book_title)
+        book.set_language(self.language)
+        book.add_author(self.author)
+
+        # 1. إضافة الخط المخصص أولاً لتأكيد إدراجه
+        if self.font_path and os.path.exists(self.font_path):
+            font_filename = os.path.basename(self.font_path)
+            ext = os.path.splitext(font_filename)[1].lower()
+            media_type = "font/otf" if ext == ".otf" else "font/ttf"
+
+            with open(self.font_path, "rb") as f:
+                font_data = f.read()
+
+            font_item = epub.EpubItem(
+                uid="custom_font",
+                file_name=f"fonts/{font_filename}",
+                media_type=media_type,
+                content=font_data
+            )
+            book.add_item(font_item)
+            logger.info(f"Custom font '{font_filename}' embedded successfully.")
+
+        # 2. إضافة التنسيقات (CSS)
+        css_content = self._get_epub_css()
+        style_item = epub.EpubItem(
+            uid="style_nav",
             file_name="style/style.css",
             media_type="text/css",
-            content=self._get_arabic_css()
+            content=css_content.encode("utf-8")
         )
-        self.book.add_item(css_style)
+        book.add_item(style_item)
 
-        chapters: List[epub.EpubHtml] = []
-        md_parser = markdown.Markdown(extensions=["extra", "codehilite", "tables", "toc"])
+        # 3. تحويل ملفات الـ Markdown وإضافتها كفصول
+        md_parser = markdown.Markdown(extensions=["extra", "codehilite", "tables"])
+        epub_chapters = []
 
-        print(f"Building EPUB from {len(md_files)} markdown files...")
+        logger.info(f"Processing {len(md_files)} markdown files...")
 
-        # Step 2: Convert each markdown chunk into an EPUB chapter
         for idx, file_name in enumerate(md_files, start=1):
             file_path = os.path.join(input_dir, file_name)
-            
             with open(file_path, "r", encoding="utf-8") as f:
                 raw_md = f.read()
 
-            # Convert MD to HTML
-            html_content = md_parser.convert(raw_md)
+            html_body = md_parser.convert(raw_md)
             md_parser.reset()
+            soup = BeautifulSoup(html_body, "html.parser")
 
-            # Parse HTML with BeautifulSoup to add RTL wrappers
-            soup = BeautifulSoup(html_content, "html.parser")
-            
-            # Extract title from first H1 or construct fall-back
-            h1_tag = soup.find("h1")
-            chapter_title = h1_tag.text.strip() if h1_tag else f"الفصل {idx}"
-
-            chapter_filename = f"chap_{idx:03d}.xhtml"
-            
-            # Create EPUB HTML Chapter
+            chapter_filename = f"chapter_{idx:03d}.xhtml"
             chapter = epub.EpubHtml(
-                title=chapter_title,
+                title=f"Chapter {idx}",
                 file_name=chapter_filename,
-                lang=self.language,
-                uid=f"chapter_{idx}"
+                lang=self.language
             )
-            
-            # Set body content with RTL attributes
-            chapter.set_content(
-                f'<html dir="rtl" lang="ar"><head></head><body>{str(soup)}</body></html>'
-            )
-            chapter.add_item(css_style)
-            
-            self.book.add_item(chapter)
-            chapters.append(chapter)
+            chapter.set_content(f"""
+            <!DOCTYPE html>
+            <html dir="rtl" lang="{self.language}">
+            <head>
+                <meta charset="utf-8"/>
+                <link rel="stylesheet" href="style/style.css" type="text/css"/>
+            </head>
+            <body>
+                {str(soup)}
+            </body>
+            </html>
+            """)
+            chapter.add_item(style_item)
+            book.add_item(chapter)
+            epub_chapters.append(chapter)
 
-        # Step 3: Configure Navigation Table of Contents (TOC) & Spine
-        self.book.toc = tuple(chapters)
-        self.book.add_item(epub.EpubNcx())
-        self.book.add_item(epub.EpubNav())
+        # 4. إلغاء الفهرس الافتراضي وتضمين الفصول مباشرة
+        book.toc = ()
+        book.spine = epub_chapters
 
-        # Define reading order (spine)
-        self.book.spine = ["nav"] + chapters
-
-        # Step 4: Write EPUB File
-        epub.write_epub(output_epub_path, self.book, {})
-        print(f"\nEPUB book successfully created at: '{output_epub_path}'")
+        epub.write_epub(output_epub_path, book)
+        logger.info(f"EPUB document created successfully at: '{output_epub_path}'")
 
 
 # --- Usage Demonstration ---
 if __name__ == "__main__":
-    translated_folder = "translated_markdown"
+    translated_folder = "temp/LFS-SYSD-BOOK-13.1/translated_markdown"
+    custom_images_folder = "extracted_pdf_markdown/images"
     output_book = "Arabic_Translated_Book.epub"
+    font_file_path = "fonts/ElMessiri.ttf"
+    closing_txt_path = "closing_note.txt"  # مسار ملف الرسالة الختامية
 
     try:
         builder = EPUBBookBuilder(
             book_title="العلامة التجارية الشخصية والتسويق الذاتي",
-            author="مترجم بوااسطة الذكاء الاصطناعي",
-            language="ar"
+            author="مترجم بواسطة الذكاء الاصطناعي",
+            language="ar",
+            font_path=font_file_path if os.path.exists(font_file_path) else None
         )
+
         builder.build_from_directory(
             input_dir=translated_folder,
-            output_epub_path=output_book
+            output_epub_path=output_book,
+            images_dir=custom_images_folder,
+            closing_message_file=closing_txt_path
         )
     except Exception as error:
-        print(f"Error building EPUB: {error}")
+        logger.error(f"Error during EPUB build: {error}")

@@ -1,3 +1,0 @@
-# THE HARVARD BUSINESS REVIEW CLASSICS SERIES
-
-Since 1922, *Harvard Business Review* has been a leading source of breakthrough ideas in management practice—many of which still speak to and influence us today. The HBR Classics series now offers you the opportunity to make these seminal pieces a part of your permanent management library. Each volume contains a groundbreaking idea that has shaped best practices and inspired countless managers around the world—and will change how you think about the business world today.

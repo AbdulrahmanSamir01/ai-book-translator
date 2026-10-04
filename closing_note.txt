@@ -1,0 +1,2 @@
+هذا الكتاب ترجم بإستعمال الذكاء الإصطناعي عن طريق المشروع مفتوح المصدر ai-book-translator
+https://github.com/AbdulrahmanSamir01/ai-book-translator
